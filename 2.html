@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Математикалық Жарыс</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+        
+        body {
+            font-family: 'Nunito', sans-serif;
+            overflow: hidden; 
+            touch-action: none; 
+            user-select: none; 
+            -webkit-user-select: none;
+        }
+
+        .numpad-btn, .action-btn {
+            transition: all 0.1s;
+            touch-action: none; 
+            -webkit-tap-highlight-color: transparent;
+        }
+        .numpad-btn:active, .action-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Animations for feedback */
+        @keyframes flash-green {
+            0% { background-color: rgba(34, 197, 94, 0.2); }
+            50% { background-color: rgba(34, 197, 94, 0.6); }
+            100% { background-color: transparent; }
+        }
+        @keyframes flash-red {
+            0% { background-color: rgba(239, 68, 68, 0.2); }
+            50% { background-color: rgba(239, 68, 68, 0.6); }
+            100% { background-color: transparent; }
+        }
+        .correct-anim { animation: flash-green 0.5s ease-out; }
+        .wrong-anim { animation: flash-red 0.5s ease-out; }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Responsive vertical text for smaller buttons */
+        .writing-vertical-lr {
+            writing-mode: vertical-lr;
+        }
+        @media (min-width: 768px) {
+            .writing-horizontal-tb {
+                writing-mode: horizontal-tb;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 h-screen w-screen flex flex-col" oncontextmenu="return false;">
+
+    <!-- Fullscreen Toggle Button (Top Right) -->
+    <button onclick="toggleFullscreen()" class="absolute top-2 right-2 z-30 bg-white/50 hover:bg-white p-3 rounded-full shadow-md border border-gray-200 transition-all active:scale-90">
+        <i id="fullscreen-icon" class="fas fa-expand text-indigo-600 text-xl"></i>
+    </button>
+
+    <!-- Start Overlay -->
+    <div id="start-overlay" class="fixed inset-0 z-50 bg-white/95 flex flex-col items-center justify-center backdrop-blur-sm p-4">
+        <h1 class="text-4xl md:text-6xl font-black text-indigo-600 mb-2 text-center">Математикалық Жарыс</h1>
+        <p class="text-xl text-gray-600 mb-8 text-center">Бүтін сандарды қосу және азайту</p>
+        
+        <div class="bg-white p-6 rounded-2xl shadow-xl border-2 border-indigo-100 max-w-md w-full text-center">
+            <p class="mb-4 font-bold text-lg">Уақытты таңдаңыз:</p>
+            <div class="flex justify-center gap-4 mb-8">
+                <button onclick="setGameDuration(30)" class="duration-btn px-4 py-2 rounded-lg bg-gray-200 hover:bg-indigo-100 font-bold transition">30с</button>
+                <button onclick="setGameDuration(60)" class="duration-btn px-4 py-2 rounded-lg bg-indigo-600 text-white font-bold transition ring-2 ring-offset-2 ring-indigo-600">60с</button>
+                <button onclick="setGameDuration(120)" class="duration-btn px-4 py-2 rounded-lg bg-gray-200 hover:bg-indigo-100 font-bold transition">120с</button>
+            </div>
+            
+            <button onclick="startGame()" class="w-full bg-green-500 hover:bg-green-600 text-white text-2xl font-black py-4 rounded-xl shadow-lg transform transition hover:-translate-y-1 active:translate-y-0">
+                БАСТАУ <i class="fas fa-play ml-2"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Over Overlay -->
+    <div id="game-over-overlay" class="hidden fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center text-white p-4">
+        <h2 class="text-5xl font-black mb-8 text-yellow-400 text-center">Ойын Аяқталды!</h2>
+        
+        <div class="flex flex-col md:flex-row gap-8 mb-10 w-full max-w-4xl justify-center items-center">
+            <!-- P1 Result -->
+            <div class="bg-blue-600 p-6 rounded-2xl w-64 text-center border-4 border-blue-400">
+                <h3 class="text-2xl font-bold mb-2">1-ші Оқушы</h3>
+                <div class="text-6xl font-black mb-2" id="end-score-1">0</div>
+                <div class="text-sm opacity-90">Дұрыс жауаптар</div>
+            </div>
+
+            <div class="text-4xl font-black text-gray-400">VS</div>
+
+            <!-- P2 Result -->
+            <div class="bg-orange-600 p-6 rounded-2xl w-64 text-center border-4 border-orange-400">
+                <h3 class="text-2xl font-bold mb-2">2-ші Оқушы</h3>
+                <div class="text-6xl font-black mb-2" id="end-score-2">0</div>
+                <div class="text-sm opacity-90">Дұрыс жауаптар</div>
+            </div>
+        </div>
+
+        <h3 id="winner-text" class="text-3xl font-bold mb-8 text-green-400 text-center"></h3>
+
+        <button onclick="resetGame()" class="bg-white text-indigo-900 text-xl font-bold py-3 px-8 rounded-full hover:bg-indigo-50 transition shadow-lg">
+            <i class="fas fa-redo mr-2"></i> Қайта Ойнау
+        </button>
+    </div>
+
+    <!-- Timer (Top Center) -->
+    <div class="absolute top-0 left-1/2 -translate-x-1/2 z-20 bg-white px-6 py-2 rounded-b-xl shadow-lg border-x border-b border-gray-200 flex items-center gap-2">
+        <i class="far fa-clock text-indigo-600 text-xl"></i>
+        <span id="timer-display" class="text-3xl font-black text-gray-800 font-mono">60</span>
+    </div>
+
+    <!-- Main Game Area (Split Screen) -->
+    <div class="flex-1 flex flex-row h-full">
+        
+        <!-- Player 1 Zone (Left) -->
+        <div id="p1-zone" class="w-1/2 bg-blue-50 border-r-2 border-blue-200 relative flex flex-col p-2 md:p-4 transition-colors">
+            <!-- Header: Score -->
+            <div class="flex justify-between items-center mb-2 bg-blue-200/50 p-2 rounded-lg">
+                <span class="font-bold text-blue-800 text-xs md:text-lg"><i class="fas fa-user-graduate mr-1"></i> 1-ші Оқушы</span>
+                <div class="flex gap-2 md:gap-3 text-xs md:text-base font-mono font-bold">
+                    <span class="text-green-600"><i class="fas fa-check"></i> <span id="p1-correct">0</span></span>
+                    <span class="text-red-500"><i class="fas fa-times"></i> <span id="p1-wrong">0</span></span>
+                </div>
+            </div>
+
+            <!-- Problem Display -->
+            <div class="flex-1 flex flex-col justify-center items-center mb-2">
+                <div class="glass-panel w-full py-6 md:py-10 mb-4 flex justify-center items-center">
+                    <span id="p1-problem" class="text-3xl md:text-6xl font-black text-gray-700 tracking-wider">?</span>
+                </div>
+                
+                <!-- Input Display -->
+                <div class="w-full max-w-[200px] h-12 md:h-16 bg-white border-2 border-blue-300 rounded-xl flex items-center justify-center overflow-hidden shadow-inner">
+                    <span id="p1-input" class="text-2xl md:text-3xl font-bold text-blue-600 h-8 min-w-[10px]"></span>
+                    <span class="animate-pulse w-0.5 h-6 md:h-8 bg-blue-600 ml-1"></span>
+                </div>
+            </div>
+
+            <!-- Keypad -->
+            <div class="flex gap-1 md:gap-2 max-w-sm mx-auto w-full pb-2 select-none">
+                <div class="grid grid-cols-3 gap-1 md:gap-2 flex-grow">
+                    <button onpointerdown="handleInput(1, '1'); event.preventDefault()" class="numpad-btn bg-white shadow-md rounded-lg py-2 md:py-4 text-lg md:text-2xl font-bold text-gray-600 hover:bg-blue-50">1</button>
+                    <button onpointerdown="handleInput(1, '2'); event.preventDefault()" class="numpad-btn bg-white shadow-md rounded-lg py-2 md:py-4 text-lg md:text-2xl font-bold text-gray-600 hover:bg-blue-50">2</button>
+                    <button onpointerdown="handleInput(1, '3'); event.preventDefault()" class="numpad-btn bg-white shadow-md rounded-lg py-2 md:py-4 text-lg md:text-2xl font-bold text-gray-600 hover:bg-blue-50">3</button>
+                    
+                    <button onpointerdown="handleInput(1, '4'); event.preventDefault()" class="numpad-btn bg-white shadow-md rounded-lg py-2 md:py-4 text-lg md:text-2xl font-bold text-gray-600 hover:bg-blue-50">4</button>
+                    <button onpointerdown="handleInput(1, '5'); event.preventDefault()" class="numpad-btn bg-white shadow-md rounded-lg py-2 md:py-4 text-lg md:text-2xl font-bold text-gray-600 hover:bg-blue-50">5</button>
+                    <button onpointerdown="handleInput(1, '6'); event.preventDefault()" class="numpad-btn bg-white shadow-md rounded-lg py-2 md:py-4 text-lg md:text-2xl font-bold text-gray-600 hover:bg-blue-50">6</button>
+                    
+                    <button onpointerdown="handleInput(1, '7'); event.preventDefault()" class="numpad-btn bg-white shadow-md rounded-lg py-2 md:py-4 text-lg md:text-2xl font-bold text-gray-600 hover:bg-blue-50">7</button>
+                    <button onpointerdown="handleInput(1, '8'); event.preventDefault()" class="numpad-btn bg-white shadow-md rounded-lg py-2 md:py-4 text-lg md:text-2xl font-bold text-gray-600 hover:bg-blue-50">8</button>
+                    <button onpointerdown="handleInput(1, '9'); event.preventDefault()" class="numpad-btn bg-white shadow-md rounded-lg py-2 md:py-4 text-lg md:text-2xl font-bold text-gray-600 hover:bg-blue-50">9</button>
+                    
+                    <button onpointerdown="handleInput(1, '-'); event.preventDefault()" class="numpad-btn bg-gray-200 shadow-md rounded-lg py-2 md:py-4 text-lg md:text-2xl font-bold text-gray-700 hover:bg-gray-300">-</button>
+                    <button onpointerdown="handleInput(1, '0'); event.preventDefault()" class="numpad-btn bg-white shadow-md rounded-lg py-2 md:py-4 text-lg md:text-2xl font-bold text-gray-600 hover:bg-blue-50">0</button>
+                    <button onpointerdown="handleBackspace(1); event.preventDefault()" class="numpad-btn bg-red-100 shadow-md rounded-lg py-2 md:py-4 text-lg md:text-2xl font-bold text-red-600 hover:bg-red-200"><i class="fas fa-backspace"></i></button>
+                </div>
+                
+                <button onpointerdown="submitAnswer(1); event.preventDefault()" class="action-btn w-1/4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl shadow-lg text-[10px] md:text-lg active:translate-y-1 transition-transform flex flex-col items-center justify-center">
+                    <i class="fas fa-check text-xl md:text-3xl mb-1"></i>
+                    <span class="writing-vertical-lr md:writing-horizontal-tb">ТЕКСЕРУ</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Player 2 Zone (Right) -->
+        <div id="p2-zone" class="w-1/2 bg-orange-50 relative flex flex-col p-2 md:p-4 transition-colors">
+            <!-- Header: Score -->
+            <div class="flex justify-between items-center mb-2 bg-orange-200/50 p-2 rounded-lg">
+                <span class="font-bold text-orange-800 text-xs md:text-lg"><i class="fas fa-user-graduate mr-1"></i> 2-ші Оқушы</span>
+                <div class="flex gap-2 md:gap-3 text-xs md:text-base font-mono font-bold">
+                    <span class="text-green-600"><i class="fas fa-check"></i> <span id="p2-correct">0</span></span>
+                    <span class="text-red-500"><i class="fas fa-times"></i> <span id="p2-wrong">0</span></span>
+                </div>
+            </div>
+
+            <!-- Problem Display -->
+            <div class="flex-1 flex flex-col justify-center items-center mb-2">
+                <div class="glass-panel w-full py-6 md:py-10 mb-4 flex justify-center items-center">
+                    <span id="p2-problem" class="text-3xl md:text-6xl font-black text-gray-700 tracking-wider">?</span>
+                </div>
+                
+                <!-- Input Display -->
+                <div class="w-full max-w-[200px] h-12 md:h-16 bg-white border-2 border-orange-300 rounded-xl flex items-center justify-center overflow-hidden shadow-inner">
+                    <span id="p2-input" class="text-2xl md:text-3xl font-bold text-orange-600 h-8 min-w-[10px]"></span>
+                    <span class="animate-pulse w-0.5 h-6 md:h-8 bg-orange-600 ml-1"></span>
+                </div>
+            </div>
+
+            <!-- Keypad -->
+            <div class="flex gap-1 md:gap-2 max-w-sm mx-auto w-full pb-2 select-none">
+                <div class="grid grid-cols-3 gap-1 md:gap-2 flex-grow">
+                    <button onpointerdown="handleInput(2, '1'); event.preventDefault()" class="numpad-btn bg-white shadow-md rounded-lg py-2 md:py-4 text-lg md:text-2xl font-bold text-gray-600 hover:bg-orange-50">1</button>
+                    <button onpointerdown="handleInput(2, '2'); event.preventDefault()" class="numpad-btn bg-white shadow-md rounded-lg py-2 md:py-4 text-lg md:text-2xl font-bold text-gray-600 hover:bg-orange-50">2</button>
+                    <button onpointerdown="handleInput(2, '3'); event.preventDefault()" class="numpad-btn bg-white shadow-md rounded-lg py-2 md:py-4 text-lg md:text-2xl font-bold text-gray-600 hover:bg-orange-50">3</button>
+                    
+                    <button onpointerdown="handleInput(2, '4'); event.preventDefault()" class="numpad-btn bg-white shadow-md rounded-lg py-2 md:py-4 text-lg md:text-2xl font-bold text-gray-600 hover:bg-orange-50">4</button>
+                    <button onpointerdown="handleInput(2, '5'); event.preventDefault()" class="numpad-btn bg-white shadow-md rounded-lg py-2 md:py-4 text-lg md:text-2xl font-bold text-gray-600 hover:bg-orange-50">5</button>
+                    <button onpointerdown="handleInput(2, '6'); event.preventDefault()" class="numpad-btn bg-white shadow-md rounded-lg py-2 md:py-4 text-lg md:text-2xl font-bold text-gray-600 hover:bg-orange-50">6</button>
+                    
+                    <button onpointerdown="handleInput(2, '7'); event.preventDefault()" class="numpad-btn bg-white shadow-md rounded-lg py-2 md:py-4 text-lg md:text-2xl font-bold text-gray-600 hover:bg-orange-50">7</button>
+                    <button onpointerdown="handleInput(2, '8'); event.preventDefault()" class="numpad-btn bg-white shadow-md rounded-lg py-2 md:py-4 text-lg md:text-2xl font-bold text-gray-600 hover:bg-orange-50">8</button>
+                    <button onpointerdown="handleInput(2, '9'); event.preventDefault()" class="numpad-btn bg-white shadow-md rounded-lg py-2 md:py-4 text-lg md:text-2xl font-bold text-gray-600 hover:bg-orange-50">9</button>
+                    
+                    <button onpointerdown="handleInput(2, '-'); event.preventDefault()" class="numpad-btn bg-gray-200 shadow-md rounded-lg py-2 md:py-4 text-lg md:text-2xl font-bold text-gray-700 hover:bg-gray-300">-</button>
+                    <button onpointerdown="handleInput(2, '0'); event.preventDefault()" class="numpad-btn bg-white shadow-md rounded-lg py-2 md:py-4 text-lg md:text-2xl font-bold text-gray-600 hover:bg-orange-50">0</button>
+                    <button onpointerdown="handleBackspace(2); event.preventDefault()" class="numpad-btn bg-red-100 shadow-md rounded-lg py-2 md:py-4 text-lg md:text-2xl font-bold text-red-600 hover:bg-red-200"><i class="fas fa-backspace"></i></button>
+                </div>
+
+                <button onpointerdown="submitAnswer(2); event.preventDefault()" class="action-btn w-1/4 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-xl shadow-lg text-[10px] md:text-lg active:translate-y-1 transition-transform flex flex-col items-center justify-center">
+                    <i class="fas fa-check text-xl md:text-3xl mb-1"></i>
+                    <span class="writing-vertical-lr md:writing-horizontal-tb">ТЕКСЕРУ</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // Fullscreen Functionality
+    function toggleFullscreen() {
+        const icon = document.getElementById('fullscreen-icon');
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().then(() => {
+                icon.classList.replace('fa-expand', 'fa-compress');
+            }).catch(err => {
+                console.error(`Error: ${err.message}`);
+            });
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+                icon.classList.replace('fa-compress', 'fa-expand');
+            }
+        }
+    }
+
+    // Update icon if fullscreen changes via system (e.g., ESC key)
+    document.addEventListener('fullscreenchange', () => {
+        const icon = document.getElementById('fullscreen-icon');
+        if (!document.fullscreenElement) {
+            icon.classList.replace('fa-compress', 'fa-expand');
+        } else {
+            icon.classList.replace('fa-expand', 'fa-compress');
+        }
+    });
+
+    // Prevent iOS double tap zoom and overall scrolling
+    document.addEventListener('dblclick', function(event) {
+        event.preventDefault();
+    }, { passive: false });
+
+    // Game State
+    let gameDuration = 60;
+    let timer = gameDuration;
+    let timerInterval = null;
+    let gameActive = false;
+
+    const player1 = {
+        id: 1,
+        scoreCorrect: 0,
+        scoreWrong: 0,
+        currentInput: "",
+        currentAnswer: 0,
+        elements: {
+            input: document.getElementById('p1-input'),
+            problem: document.getElementById('p1-problem'),
+            correct: document.getElementById('p1-correct'),
+            wrong: document.getElementById('p1-wrong'),
+            zone: document.getElementById('p1-zone')
+        }
+    };
+
+    const player2 = {
+        id: 2,
+        scoreCorrect: 0,
+        scoreWrong: 0,
+        currentInput: "",
+        currentAnswer: 0,
+        elements: {
+            input: document.getElementById('p2-input'),
+            problem: document.getElementById('p2-problem'),
+            correct: document.getElementById('p2-correct'),
+            wrong: document.getElementById('p2-wrong'),
+            zone: document.getElementById('p2-zone')
+        }
+    };
+
+    // Configuration
+    function setGameDuration(seconds) {
+        gameDuration = seconds;
+        document.querySelectorAll('.duration-btn').forEach(btn => {
+            btn.classList.remove('bg-indigo-600', 'text-white', 'ring-2', 'ring-offset-2', 'ring-indigo-600');
+            btn.classList.add('bg-gray-200');
+            if(btn.innerText.includes(seconds)) {
+                btn.classList.remove('bg-gray-200');
+                btn.classList.add('bg-indigo-600', 'text-white', 'ring-2', 'ring-offset-2', 'ring-indigo-600');
+            }
+        });
+        document.getElementById('timer-display').innerText = seconds;
+    }
+
+    // Problem Generator
+    function generateProblem() {
+        const n1 = Math.floor(Math.random() * 25) - 12; 
+        const n2 = Math.floor(Math.random() * 25) - 12;
+        
+        const isAddition = Math.random() > 0.5;
+        
+        let answer;
+        let text;
+
+        if (isAddition) {
+            answer = n1 + n2;
+            if (n2 < 0) {
+                text = `${n1} + (${n2})`;
+            } else {
+                text = `${n1} + ${n2}`;
+            }
+        } else {
+            answer = n1 - n2;
+            if (n2 < 0) {
+                text = `${n1} - (${n2})`;
+            } else {
+                text = `${n1} - ${n2}`;
+            }
+        }
+
+        return { text, answer };
+    }
+
+    function newQuestion(player) {
+        const problem = generateProblem();
+        player.currentAnswer = problem.answer;
+        player.elements.problem.innerText = problem.text;
+        player.currentInput = "";
+        updateInputDisplay(player);
+    }
+
+    // Input Handling
+    function handleInput(playerId, value) {
+        if (!gameActive) return;
+        const player = playerId === 1 ? player1 : player2;
+        
+        if (player.currentInput.length >= 4) return;
+        
+        if (value === '-') {
+            if (player.currentInput.length === 0) {
+                player.currentInput = '-';
+            } else if (player.currentInput === '-') {
+                player.currentInput = ''; 
+            }
+        } else {
+            player.currentInput += value;
+        }
+        
+        updateInputDisplay(player);
+    }
+
+    function handleBackspace(playerId) {
+        if (!gameActive) return;
+        const player = playerId === 1 ? player1 : player2;
+        player.currentInput = player.currentInput.slice(0, -1);
+        updateInputDisplay(player);
+    }
+
+    function updateInputDisplay(player) {
+        player.elements.input.innerText = player.currentInput;
+    }
+
+    // Submission & Feedback
+    function submitAnswer(playerId) {
+        if (!gameActive) return;
+        const player = playerId === 1 ? player1 : player2;
+        
+        if (player.currentInput === "" || player.currentInput === "-") return;
+
+        const val = parseInt(player.currentInput);
+        
+        if (val === player.currentAnswer) {
+            player.scoreCorrect++;
+            player.elements.correct.innerText = player.scoreCorrect;
+            showFeedback(player, true);
+        } else {
+            player.scoreWrong++;
+            player.elements.wrong.innerText = player.scoreWrong;
+            showFeedback(player, false);
+        }
+
+        newQuestion(player);
+    }
+
+    function showFeedback(player, isCorrect) {
+        player.elements.zone.classList.remove('correct-anim', 'wrong-anim');
+        void player.elements.zone.offsetWidth; 
+        
+        if (isCorrect) {
+            player.elements.zone.classList.add('correct-anim');
+        } else {
+            player.elements.zone.classList.add('wrong-anim');
+        }
+    }
+
+    // Game Control
+    function startGame() {
+        document.getElementById('start-overlay').classList.add('hidden');
+        timer = gameDuration;
+        document.getElementById('timer-display').innerText = timer;
+        gameActive = true;
+        
+        [player1, player2].forEach(p => {
+            p.scoreCorrect = 0;
+            p.scoreWrong = 0;
+            p.elements.correct.innerText = 0;
+            p.elements.wrong.innerText = 0;
+            newQuestion(p);
+        });
+
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            timer--;
+            document.getElementById('timer-display').innerText = timer;
+            
+            const timerEl = document.getElementById('timer-display');
+            if (timer <= 10) {
+                timerEl.classList.add('text-red-600', 'animate-pulse');
+            } else {
+                timerEl.classList.remove('text-red-600', 'animate-pulse');
+            }
+
+            if (timer <= 0) {
+                endGame();
+            }
+        }, 1000);
+    }
+
+    function endGame() {
+        gameActive = false;
+        clearInterval(timerInterval);
+        
+        document.getElementById('game-over-overlay').classList.remove('hidden');
+        document.getElementById('end-score-1').innerText = player1.scoreCorrect;
+        document.getElementById('end-score-2').innerText = player2.scoreCorrect;
+
+        const winnerText = document.getElementById('winner-text');
+        if (player1.scoreCorrect > player2.scoreCorrect) {
+            winnerText.innerText = "1-ші Оқушы Жеңді! 🏆";
+        } else if (player2.scoreCorrect > player1.scoreCorrect) {
+            winnerText.innerText = "2-ші Оқушы Жеңді! 🏆";
+        } else {
+            winnerText.innerText = "Достық жеңді! 🤝";
+        }
+    }
+
+    function resetGame() {
+        document.getElementById('game-over-overlay').classList.add('hidden');
+        document.getElementById('start-overlay').classList.remove('hidden');
+        document.getElementById('timer-display').classList.remove('text-red-600', 'animate-pulse');
+        document.getElementById('timer-display').innerText = gameDuration;
+    }
+
+</script>
+</body>
+</html>
