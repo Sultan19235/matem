@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Brackets Kazakh - Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- KaTeX for professional math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+        }
+
+        /* Improved Fraction Input Styling with Sign Slot */
+        .fraction-input-wrapper {
+            display: inline-flex;
+            align-items: center;
+            vertical-align: middle;
+            margin: 0 2px;
+            gap: 2px;
+        }
+
+        .fraction-sign-slot {
+            min-width: 18px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9em;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s;
+            font-weight: bold;
+        }
+
+        .fraction-sign-slot:hover {
+            background: #e2e8f0;
+        }
+
+        .fraction-sign-slot.active-slot {
+            background: #eff6ff;
+            color: #2563eb;
+            box-shadow: inset 0 0 0 1px #3b82f6;
+        }
+
+        .fraction-input-box {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            background: #fff;
+            border: 2px solid #cbd5e1;
+            border-radius: 6px;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        .fraction-input-box.active {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .frac-slot {
+            min-width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+            font-size: 0.8em;
+            cursor: pointer;
+        }
+
+        .frac-slot:hover { background: #f8fafc; }
+        .frac-slot.active-slot { background: #eff6ff; color: #2563eb; }
+
+        .frac-divider {
+            height: 2px;
+            width: 100%;
+            background-color: #64748b;
+        }
+
+        .input-cursor {
+            border-right: 2px solid #3b82f6;
+            animation: blink 1s step-end infinite;
+            margin-left: 1px;
+        }
+
+        @keyframes blink {
+            from, to { border-color: transparent; }
+            50% { border-color: #3b82f6; }
+        }
+
+        .lvl-btn.active {
+            background-color: #2563eb;
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transform: scale(1.05);
+        }
+
+        .k-btn {
+            height: 2.8rem;
+            background-color: #f8fafc;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1rem;
+            color: #1e293b;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid #e2e8f0;
+        }
+        .k-btn:hover {
+            background-color: #fff;
+            border-color: #3b82f6;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .k-btn:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <div id="app" class="min-h-screen p-4 flex flex-col items-center relative">
+        <!-- Fullscreen Button -->
+        <button onclick="toggleFullscreen()" class="absolute top-4 right-4 md:right-8 p-2 bg-white rounded-full shadow-sm border border-slate-200 text-slate-500 hover:text-blue-600 hover:border-blue-300 transition-all z-10" title="Толық экран">
+            <i data-lucide="maximize" class="w-5 h-5"></i>
+        </button>
+
+        <!-- Stats Bar -->
+        <header class="w-full max-w-4xl bg-white rounded-2xl shadow-sm border border-slate-200 p-3 mb-4 flex flex-wrap justify-between items-center gap-4 mt-8 md:mt-0">
+            <div class="flex items-center gap-4">
+                <div class="flex flex-col">
+                    <span class="text-[10px] uppercase tracking-widest font-black text-slate-400">Деңгей</span>
+                    <span id="stat-level" class="text-lg font-black text-blue-600">1/6</span>
+                </div>
+                <div class="w-px h-6 bg-slate-200"></div>
+                <div class="flex flex-col">
+                    <span class="text-[10px] uppercase tracking-widest font-black text-slate-400">Ұпай</span>
+                    <span id="stat-score" class="text-lg font-black text-emerald-600">0</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2 bg-orange-50 px-3 py-1.5 rounded-xl border border-orange-100">
+                <i data-lucide="flame" class="text-orange-500 w-4 h-4"></i>
+                <span id="stat-streak" class="font-black text-orange-700 text-base">0</span>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="flex gap-1.5 mb-4 overflow-x-auto w-full max-w-4xl pb-2 scroll-smooth">
+            <button onclick="changeLevel(1)" id="btn-lvl-1" class="lvl-btn active px-3 py-1.5 rounded-lg font-bold transition-all border border-transparent text-sm whitespace-nowrap">1-деңгей</button>
+            <button onclick="changeLevel(2)" id="btn-lvl-2" class="lvl-btn px-3 py-1.5 rounded-lg font-bold transition-all bg-white text-slate-500 border border-slate-200 text-sm whitespace-nowrap">2-деңгей</button>
+            <button onclick="changeLevel(3)" id="btn-lvl-3" class="lvl-btn px-3 py-1.5 rounded-lg font-bold transition-all bg-white text-slate-500 border border-slate-200 text-sm whitespace-nowrap">3-деңгей</button>
+            <button onclick="changeLevel(4)" id="btn-lvl-4" class="lvl-btn px-3 py-1.5 rounded-lg font-bold transition-all bg-white text-slate-500 border border-slate-200 text-sm whitespace-nowrap">4-деңгей</button>
+            <button onclick="changeLevel(5)" id="btn-lvl-5" class="lvl-btn px-3 py-1.5 rounded-lg font-bold transition-all bg-white text-slate-500 border border-slate-200 text-sm whitespace-nowrap">5-деңгей</button>
+            <button onclick="changeLevel(6)" id="btn-lvl-6" class="lvl-btn px-3 py-1.5 rounded-lg font-bold transition-all bg-white text-slate-500 border border-slate-200 text-sm whitespace-nowrap">6-деңгей</button>
+        </nav>
+
+        <main class="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Problem Card -->
+            <div class="lg:col-span-8">
+                <div id="card" class="bg-white rounded-[24px] shadow-xl p-5 md:p-8 border border-white flex flex-col items-center relative min-h-[300px]">
+                    <span class="text-slate-400 font-bold text-[10px] tracking-widest mb-1">ЕСЕПТІ ШЫҒАРЫҢЫЗ</span>
+                    
+                    <!-- LaTeX Problem Display -->
+                    <div id="problem-display" class="my-4 h-16 flex items-center justify-center">
+                        <div id="math-target" class="text-2xl md:text-3xl text-slate-800"></div>
+                    </div>
+
+                    <!-- Input Area -->
+                    <div id="input-box" class="w-full max-w-xl bg-slate-50 border-2 border-slate-200 rounded-[16px] p-4 flex flex-wrap items-center justify-center gap-1 text-xl md:text-2xl min-h-[70px] transition-all cursor-text focus-within:border-blue-400 focus-within:bg-white">
+                        <!-- Content via JS -->
+                    </div>
+
+                    <div id="feedback" class="mt-3 h-6 flex items-center justify-center font-bold text-sm"></div>
+
+                    <div id="correction" class="hidden w-full mt-3 p-3 bg-red-50 text-red-700 rounded-xl border border-red-100 text-center animate-in fade-in zoom-in duration-300">
+                        <p class="text-[10px] uppercase font-black opacity-60 mb-1">Дұрыс жауап:</p>
+                        <div id="correct-math" class="text-lg"></div>
+                        <button onclick="nextProblem()" class="mt-2 bg-red-100 px-4 py-1 rounded-md text-xs font-bold hover:bg-red-200 transition-colors">Келесі</button>
+                    </div>
+
+                    <button onclick="check()" class="mt-5 w-full md:w-auto px-10 py-3 bg-blue-600 text-white rounded-[16px] font-black text-base shadow-lg shadow-blue-200 hover:bg-blue-700 hover:-translate-y-0.5 transition-all active:scale-95">
+                        ТЕКСЕРУ
+                    </button>
+                </div>
+            </div>
+
+            <!-- Professional Keypad -->
+            <div class="lg:col-span-4 bg-white rounded-[24px] shadow-lg p-5 border border-slate-200 h-fit">
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="typeChar('1')" class="k-btn">1</button>
+                    <button onclick="typeChar('2')" class="k-btn">2</button>
+                    <button onclick="typeChar('3')" class="k-btn">3</button>
+                    <button onclick="typeChar('4')" class="k-btn">4</button>
+                    <button onclick="typeChar('5')" class="k-btn">5</button>
+                    <button onclick="typeChar('6')" class="k-btn">6</button>
+                    <button onclick="typeChar('7')" class="k-btn">7</button>
+                    <button onclick="typeChar('8')" class="k-btn">8</button>
+                    <button onclick="typeChar('9')" class="k-btn">9</button>
+                    <button onclick="typeChar('.')" class="k-btn text-blue-500">.</button>
+                    <button onclick="typeChar('0')" class="k-btn">0</button>
+                    <button onclick="typeChar('-')" class="k-btn text-blue-500">−</button>
+
+                    <button onclick="typeChar('x')" class="k-btn bg-indigo-50 text-indigo-600 italic font-serif">x</button>
+                    <button onclick="typeChar('y')" class="k-btn bg-indigo-50 text-indigo-600 italic font-serif">y</button>
+                    <button onclick="typeChar('+')" class="k-btn text-blue-500">+</button>
+                    
+                    <!-- Arrow Controls -->
+                    <button onclick="moveLeft()" class="k-btn text-slate-500 flex items-center justify-center">
+                        <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                    </button>
+                    <!-- Improved Fraction Button -->
+                    <button onclick="addFrac()" class="k-btn bg-orange-50 text-orange-600 flex flex-col items-center justify-center font-black text-xl">
+                        /
+                    </button>
+                    <button onclick="moveRight()" class="k-btn text-slate-500 flex items-center justify-center">
+                        <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                    </button>
+
+                    <button onclick="back()" class="k-btn col-span-3 bg-red-50 text-red-500">
+                        <i data-lucide="delete" class="mx-auto w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let lvl = 1;
+        let score = 0;
+        let streak = 0;
+        let currentProb = { latex: '', ans: '' };
+        
+        // Parts: {t: 'txt', v: ''} or {t: 'frac', s: '', n: '', d: ''} (s = sign)
+        let parts = [{t: 'txt', v: ''}];
+        let pIdx = 0; 
+        let slot = 'v'; // 'v', 's', 'n', 'd'
+
+        window.onload = () => {
+            lucide.createIcons();
+            generate();
+            updateUI();
+        };
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        const gcd = (a, b) => b === 0 ? Math.abs(a) : gcd(b, a % b);
+
+        function fmtTerm(c, v, isFirst = false) {
+            if (c === 0) return "";
+            let s = "";
+            if (c > 0) {
+                if (!isFirst) s = "+";
+            } else {
+                s = "-";
+            }
+            
+            let absC = Math.abs(c);
+            if (absC !== 1) s += absC;
+            
+            return s + v;
+        }
+        
+        function latexFrac(n, d) {
+            if (n * d < 0) {
+                return `-\\frac{${Math.abs(n)}}{${Math.abs(d)}}`;
+            }
+            return `\\frac{${Math.abs(n)}}{${Math.abs(d)}}`;
+        }
+
+        function fmtFrac(n, d) {
+            const common = gcd(n, d);
+            n /= common; d /= common;
+            if (d < 0) { n = -n; d = -d; }
+            if (d === 1) return n.toString();
+            return `${n}/${d}`;
+        }
+
+        function getRand(min, max, ex = []) {
+            let r = Math.floor(Math.random() * (max - min + 1)) + min;
+            return ex.includes(r) ? getRand(min, max, ex) : r;
+        }
+
+        function changeLevel(l) {
+            lvl = l;
+            document.querySelectorAll('.lvl-btn').forEach(b => b.classList.remove('active', 'bg-blue-600', 'text-white'));
+            document.getElementById(`btn-lvl-${l}`).classList.add('active');
+            generate();
+        }
+
+        function generate() {
+            let ltx = "";
+            let ans = "";
+            const v1 = Math.random() > 0.5 ? 'x' : 'y';
+            const v2 = v1 === 'x' ? 'y' : 'x';
+
+            switch(lvl) {
+                case 1: { 
+                    const s = Math.random() > 0.5 ? 1 : -1;
+                    const type = Math.random() > 0.5 ? '2vars' : '1var';
+                    
+                    // Implicit + (empty), Explicit -
+                    const signChar = s === 1 ? '' : '-';
+
+                    if (type === '2vars') {
+                        const c1 = getRand(-9, 9, [0, 1, -1]);
+                        const c2 = getRand(-9, 9, [0, 1, -1]);
+                        ltx = `${signChar}(${fmtTerm(c1, v1, true)}${fmtTerm(c2, v2, false)})`;
+                        ans = `${fmtTerm(s*c1, v1, true)}${fmtTerm(s*c2, v2, false)}`;
+                    } else {
+                        const c1 = getRand(-9, 9, [0, 1, -1]);
+                        const c2 = getRand(-20, 20, [0]); 
+                        ltx = `${signChar}(${fmtTerm(c1, v1, true)} ${c2 >= 0 ? '+' : ''}${c2})`;
+                        ans = `${fmtTerm(s*c1, v1, true)}${s*c2 >= 0 ? '+' : ''}${s*c2}`;
+                    }
+                    break;
+                }
+                case 2: { 
+                    const k = getRand(-10, 10, [0, 1, -1]);
+                    const type = Math.random() > 0.5 ? '2vars' : '1var';
+
+                    if (type === '2vars') {
+                        const c1 = getRand(-5, 5, [0]);
+                        const c2 = getRand(-5, 5, [0]);
+                        ltx = `${k}(${fmtTerm(c1, v1, true)}${fmtTerm(c2, v2, false)})`;
+                        ans = `${fmtTerm(k*c1, v1, true)}${fmtTerm(k*c2, v2, false)}`;
+                    } else {
+                        const c1 = getRand(-5, 5, [0]);
+                        const c2 = getRand(-10, 10, [0]);
+                        ltx = `${k}(${fmtTerm(c1, v1, true)} ${c2 >= 0 ? '+' : ''}${c2})`;
+                        ans = `${fmtTerm(k*c1, v1, true)}${k*c2 >= 0 ? '+' : ''}${k*c2}`;
+                    }
+                    break;
+                }
+                case 3: { 
+                    const k = getRand(-5, 5, [0, 1, -1]);
+                    const c1 = (getRand(1, 9)/10);
+                    const c2 = (getRand(-9, 9, [0])/10);
+                    const term2Sign = c2 >= 0 ? '+' : '';
+                    ltx = `${k}(${c1}${v1} ${term2Sign} ${c2}${v2})`;
+                    
+                    const a1 = Number((k*c1).toFixed(2));
+                    const a2 = Number((k*c2).toFixed(2));
+                    const a2Sign = a2 >= 0 ? '+' : '';
+                    ans = `${a1}${v1}${a2Sign}${a2}${v2}`;
+                    break;
+                }
+                case 4: { 
+                    const k = (getRand(-15, 15, [0])/10).toFixed(1);
+                    const c1 = (getRand(1, 9)/10).toFixed(1);
+                    const c2 = (getRand(-9, 9, [0])/10).toFixed(1);
+                    const term2Sign = parseFloat(c2) >= 0 ? '+' : '';
+                    ltx = `${k}(${c1}${v1} ${term2Sign} ${c2}${v2})`;
+                    
+                    const a1 = Number((parseFloat(k)*parseFloat(c1)).toFixed(2));
+                    const a2 = Number((parseFloat(k)*parseFloat(c2)).toFixed(2));
+                    const a2Sign = a2 >= 0 ? '+' : '';
+                    ans = `${a1}${v1}${a2Sign}${a2}${v2}`;
+                    break;
+                }
+                case 5: { 
+                    const kn = getRand(-3, 3, [0]); const kd = getRand(2, 4);
+                    const kn_final = kn === kd ? kn + 1 : (kn === -kd ? kn - 1 : kn);
+                    const an = getRand(1, 4); const ad = getRand(2, 4);
+                    const an_final = an === ad ? an + 1 : an;
+                    const bn = getRand(-3, 3, [0]); const bd = getRand(2, 4);
+                    const bn_final = bn === bd ? bn + 1 : (bn === -bd ? bn - 1 : bn);
+
+                    const term2Op = bn_final >= 0 ? '+' : '-';
+                    const term2Val = Math.abs(bn_final);
+                    
+                    ltx = `${latexFrac(kn_final, kd)}\\left( ${latexFrac(an_final, ad)}${v1} ${term2Op} \\frac{${term2Val}}{${bd}}${v2} \\right)`;
+                    
+                    const r1 = fmtFrac(kn_final*an_final, kd*ad);
+                    const prod2Num = kn_final * bn_final;
+                    const prod2Den = kd * bd;
+                    const r2 = fmtFrac(prod2Num, prod2Den);
+                    
+                    const midSign = (!r2.startsWith('-')) ? '+' : '';
+                    ans = `${r1}${v1}${midSign}${r2}${v2}`;
+                    break;
+                }
+                case 6: { 
+                    const type = Math.random();
+                    if (type < 0.5) {
+                        const kn = getRand(-3, 3, [0]); const kd = getRand(2, 4);
+                        const c1 = getRand(-5, 5, [0]);
+                        const c2 = (getRand(-20, 20, [0])/10);
+                        
+                        ltx = `${latexFrac(kn, kd)}\\left( ${fmtTerm(c1, v1, true)} ${c2 >= 0 ? '+' : ''} ${c2} \\right)`;
+                        const res1 = fmtFrac(kn*c1, kd);
+                        const res2 = Number((kn/kd * c2).toFixed(2));
+                        
+                        ans = `${res1}${v1}${res2 >= 0 ? '+' : ''}${res2}`;
+                    } else {
+                        const k = getRand(-5, 5, [0, 1, -1]);
+                        const an = getRand(1, 3); const ad = getRand(2, 4);
+                        const c2 = (getRand(-20, 20, [0])/10);
+
+                        ltx = `${k}\\left( ${latexFrac(an, ad)}${v1} ${c2 >= 0 ? '+' : ''} ${c2} \\right)`;
+                        const res1 = fmtFrac(k*an, ad);
+                        const res2 = Number((k*c2).toFixed(2));
+                        ans = `${res1}${v1}${res2 >= 0 ? '+' : ''}${res2}`;
+                    }
+                    break;
+                }
+            }
+
+            currentProb = { latex: ltx, ans: ans };
+            resetInput();
+            katex.render(ltx, document.getElementById('math-target'), { throwOnError: false });
+        }
+
+        function resetInput() {
+            parts = [{t: 'txt', v: ''}];
+            pIdx = 0; slot = 'v';
+            document.getElementById('feedback').innerHTML = '';
+            document.getElementById('correction').classList.add('hidden');
+            renderInput();
+        }
+
+        function renderInput() {
+            const container = document.getElementById('input-box');
+            container.innerHTML = '';
+            parts.forEach((p, i) => {
+                if(p.t === 'txt') {
+                    const el = document.createElement('span');
+                    el.className = (i === pIdx && slot === 'v') ? 'input-cursor' : '';
+                    el.innerText = p.v || '';
+                    if(p.v === '' && i === pIdx) el.innerHTML = '&nbsp;'; 
+                    el.onclick = () => { pIdx = i; slot = 'v'; renderInput(); };
+                    container.appendChild(el);
+                } else {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'fraction-input-wrapper';
+                    
+                    const sign = document.createElement('div');
+                    sign.className = `fraction-sign-slot ${i === pIdx && slot === 's' ? 'active-slot' : ''}`;
+                    sign.innerText = p.s || (i === pIdx && slot === 's' ? '?' : '');
+                    if (p.s === '' && i !== pIdx && slot !== 's') sign.style.display = 'none';
+                    if (p.s === '') sign.style.minWidth = '12px';
+                    
+                    sign.onclick = () => { pIdx = i; slot = 's'; renderInput(); };
+
+                    const box = document.createElement('div');
+                    box.className = `fraction-input-box ${i === pIdx && (slot === 'n' || slot === 'd') ? 'active' : ''}`;
+                    
+                    const num = document.createElement('div');
+                    num.className = `frac-slot ${i === pIdx && slot === 'n' ? 'active-slot' : ''}`;
+                    num.innerText = p.n || '?';
+                    num.onclick = () => { pIdx = i; slot = 'n'; renderInput(); };
+                    
+                    const line = document.createElement('div');
+                    line.className = 'frac-divider';
+                    
+                    const den = document.createElement('div');
+                    den.className = `frac-slot ${i === pIdx && slot === 'd' ? 'active-slot' : ''}`;
+                    den.innerText = p.d || '?';
+                    den.onclick = () => { pIdx = i; slot = 'd'; renderInput(); };
+                    
+                    box.append(num, line, den);
+                    wrapper.append(sign, box);
+                    container.appendChild(wrapper);
+                }
+            });
+        }
+
+        function typeChar(c) {
+            let p = parts[pIdx];
+            const isOperatorOrVar = ['+', 'x', 'y'].includes(c) || (c === '-' && (slot === 'n' || slot === 'd') && p[slot].length > 0);
+            
+            if (isOperatorOrVar && (slot === 'n' || slot === 'd')) {
+                moveRight();
+                if (pIdx < parts.length) p = parts[pIdx];
+                else {
+                    parts.push({t: 'txt', v: ''});
+                    pIdx++;
+                    p = parts[pIdx];
+                }
+            }
+
+            if(slot === 'v') {
+                p.v += c;
+            } else if(slot === 's') {
+                if(c === '-' || c === '+') p.s = (p.s === c ? '' : c);
+                else {
+                    slot = 'n';
+                    p.n += c;
+                }
+            } else if (slot === 'n') {
+                if(!['+', '-', 'x', 'y'].includes(c)) p.n += c;
+            } else if(slot === 'd') {
+                if(!['+', '-', 'x', 'y'].includes(c)) p.d += c;
+            }
+            renderInput();
+        }
+
+        function moveLeft() {
+            if (slot === 'v') {
+                if (pIdx > 0) {
+                    pIdx--;
+                    slot = (parts[pIdx].t === 'txt' ? 'v' : 'd');
+                }
+            } else if (slot === 'd') {
+                slot = 'n';
+            } else if (slot === 'n') {
+                slot = 's';
+            } else if (slot === 's') {
+                if (pIdx > 0) {
+                    pIdx--;
+                    slot = 'v';
+                }
+            }
+            renderInput();
+        }
+
+        function moveRight() {
+            if (slot === 'v') {
+                if (pIdx < parts.length - 1) {
+                    pIdx++;
+                    slot = (parts[pIdx].t === 'txt' ? 'v' : 's');
+                } else if (parts[pIdx].v !== '') {
+                    parts.push({t: 'txt', v: ''});
+                    pIdx++;
+                    slot = 'v';
+                }
+            } else if (slot === 's') {
+                slot = 'n';
+            } else if (slot === 'n') {
+                slot = 'd';
+            } else if (slot === 'd') {
+                if (pIdx < parts.length - 1) {
+                    pIdx++;
+                    slot = 'v';
+                } else {
+                    parts.push({t: 'txt', v: ''});
+                    pIdx++;
+                    slot = 'v';
+                }
+            }
+            renderInput();
+        }
+
+        function addFrac() {
+            let p = parts[pIdx];
+            
+            // Smart Fraction: Convert preceding text to numerator
+            if (p.t === 'txt' && slot === 'v') {
+                const text = p.v;
+                // Matches last atomic term (digits/dots optionally ending with x/y)
+                // e.g., "12", "12.5", "x", "2x"
+                const match = text.match(/([0-9.]+[xy]?|[xy])$/);
+                
+                if (match && match[0].length > 0) {
+                    const val = match[0];
+                    const before = text.slice(0, -val.length);
+                    
+                    p.v = before;
+                    
+                    parts.splice(pIdx + 1, 0, {t: 'frac', s: '', n: val, d: ''});
+                    
+                    if (pIdx + 2 >= parts.length || parts[pIdx + 2].t !== 'txt') {
+                        parts.splice(pIdx + 2, 0, {t: 'txt', v: ''});
+                    }
+                    
+                    pIdx++;
+                    slot = 'd';
+                    renderInput();
+                    return;
+                }
+            }
+
+            // Fallback (empty fraction)
+            if (parts[pIdx].t === 'txt' && parts[pIdx].v === '') {
+                parts[pIdx] = {t: 'frac', s: '', n: '', d: ''};
+                slot = 's';
+            } else {
+                parts.splice(pIdx + 1, 0, {t: 'frac', s: '', n: '', d: ''});
+                if (pIdx + 2 >= parts.length || parts[pIdx + 2].t !== 'txt') {
+                    parts.splice(pIdx + 2, 0, {t: 'txt', v: ''});
+                }
+                pIdx++;
+                slot = 's';
+            }
+            renderInput();
+        }
+
+        function back() {
+            const p = parts[pIdx];
+            if(slot === 'v') {
+                if(p.v.length > 0) p.v = p.v.slice(0, -1);
+                else if(pIdx > 0) { 
+                    parts.splice(pIdx, 1);
+                    pIdx--; 
+                    slot = (parts[pIdx].t === 'txt' ? 'v' : 'd'); 
+                }
+            } else if(slot === 's') {
+                if(p.s !== '') p.s = '';
+                else {
+                    if (pIdx > 0) {
+                        pIdx--; slot = 'v';
+                    }
+                }
+            } else if(slot === 'n') {
+                if(p.n.length > 0) p.n = p.n.slice(0, -1);
+                else slot = 's';
+            } else if(slot === 'd') {
+                if(p.d.length > 0) p.d = p.d.slice(0, -1);
+                else slot = 'n';
+            }
+            if (parts.length === 0) {
+                parts = [{t: 'txt', v: ''}];
+                pIdx = 0; slot = 'v';
+            }
+            renderInput();
+        }
+
+        function check() {
+            const user = parts.map(p => {
+                if (p.t === 'txt') return p.v;
+                let sStr = p.s === '-' ? '-' : (p.s === '+' ? '+' : '');
+                return `${sStr}${p.n}/${p.d}`;
+            }).join('').replace(/\s/g, '').replace(/\+\-/g, '-').replace(/\-\+/g, '-').toLowerCase();
+            
+            const correct = currentProb.ans.replace(/\s/g, '').replace(/\+\-/g, '-').replace(/\-\+/g, '-').toLowerCase();
+
+            if(user === correct) {
+                score++; streak++;
+                document.getElementById('feedback').innerHTML = '<span class="text-emerald-500 animate-bounce">ӨТЕ ЖАҚСЫ! +1</span>';
+                setTimeout(nextProblem, 1000);
+            } else {
+                streak = 0;
+                document.getElementById('feedback').innerHTML = '<span class="text-red-500">ҚАТЕ</span>';
+                document.getElementById('correction').classList.remove('hidden');
+                
+                let ansLtx = currentProb.ans.split(/([+-])/).map(part => {
+                    if(part.includes('/')) {
+                        let [n, d] = part.split('/');
+                        return latexFrac(n, d);
+                    }
+                    return part;
+                }).join('');
+                katex.render(ansLtx, document.getElementById('correct-math'));
+            }
+            updateUI();
+        }
+
+        function nextProblem() {
+            generate();
+        }
+
+        function updateUI() {
+            document.getElementById('stat-level').innerText = `${lvl}/6`;
+            document.getElementById('stat-score').innerText = score;
+            document.getElementById('stat-streak').innerText = streak;
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>
