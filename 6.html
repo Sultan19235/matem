@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Бүтін сандарды қосу және азайту</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for animations and SVG drawing */
+        @keyframes draw {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+        .animate-draw-arrow path {
+            animation-name: draw;
+            animation-timing-function: ease-out;
+            animation-fill-mode: forwards;
+        }
+        
+        .animate-pulse {
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.7;
+                transform: scale(1.1);
+            }
+        }
+        /* Ensure the body uses the Inter font */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Remove arrows from number input */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        
+        /* Keypad transition */
+        .keypad-btn {
+            touch-action: manipulation;
+            transition: all 0.1s;
+        }
+        .keypad-btn:active {
+            transform: scale(0.95);
+            background-color: #e2e8f0; 
+        }
+    </style>
+</head>
+<body class="bg-slate-50 transition-colors duration-300">
+
+    <div id="app" class="min-h-screen p-4 flex flex-col items-center relative">
+       
+        <!-- Header -->
+        <header class="w-full max-w-5xl bg-indigo-600 text-white p-6 rounded-xl shadow-lg mb-6 flex flex-col md:flex-row justify-between items-center relative z-10">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold mb-1">Бүтін сандар: Қосу және Азайту</h1>
+                <p class="text-indigo-200 text-sm">Координаталық түзудегі амалдар</p>
+            </div>
+            
+            <div class="flex flex-col md:flex-row items-center gap-4 mt-4 md:mt-0">
+                <!-- Scoreboard -->
+                <div class="flex gap-2 md:gap-4 text-sm md:text-base font-bold text-slate-800">
+                    <div class="px-3 md:px-4 py-2 bg-white rounded-lg shadow-md border-b-4 border-indigo-200">
+                        Барлығы: <span id="totalCountDisplay" class="text-indigo-600 ml-1">0</span>
+                    </div>
+                    <div class="px-3 md:px-4 py-2 bg-white rounded-lg shadow-md border-b-4 border-green-200">
+                        Дұрыс: <span id="correctCountDisplay" class="text-green-600 ml-1">0</span>
+                    </div>
+                    <div class="px-3 md:px-4 py-2 bg-white rounded-lg shadow-md border-b-4 border-red-200">
+                        Қате: <span id="wrongCountDisplay" class="text-red-600 ml-1">0</span>
+                    </div>
+                </div>
+
+                <!-- Fullscreen Button -->
+                <button id="fullscreenBtn" class="p-2 bg-indigo-500 hover:bg-indigo-400 rounded-lg text-white transition-colors" title="Толық экран">
+                    <svg id="fullscreenIcon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-maximize"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="w-full max-w-5xl bg-white p-4 md:p-6 rounded-xl shadow-xl border border-slate-200 z-0">
+            
+            <!-- Top Controls: Generator & Display -->
+            <div class="flex flex-col md:flex-row items-center justify-between gap-6 mb-8 bg-slate-100 p-6 rounded-lg border border-slate-200 relative">
+               
+                <button id="generateBtn" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-lg font-bold shadow transition-all active:scale-95">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shuffle"><path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.5-8.6c.7-.9 1.9-1.4 3.1-1.4h3.7"/><path d="M20 9l-4-4"/><path d="M20 9l-4 4"/><path d="M2 6h3.4c1.3 0 2.5.6 3.3 1.7l6.5 8.6c.7.9 1.9 1.4 3.1 1.4h3.7"/><path d="M20 15l-4-4"/></svg>
+                    Жаңа есеп
+                </button>
+
+                <!-- Problem Display & Input -->
+                <div class="flex flex-wrap justify-center items-center gap-4 bg-white px-6 py-4 rounded-xl shadow-inner border border-slate-300">
+                    <span id="problemDisplay" class="text-3xl md:text-5xl font-extrabold text-slate-800 tracking-wider"></span>
+                    <span class="text-3xl md:text-5xl font-extrabold text-slate-400">=</span>
+                    
+                    <!-- Input Area -->
+                    <div class="relative">
+                        <!-- Changed type="number" to type="text" to allow "-" character to be persistently stored and read by JS -->
+                        <input type="text" inputmode="numeric" id="answerInput" autocomplete="off" class="w-24 md:w-32 p-2 text-center text-3xl md:text-4xl font-extrabold border-2 border-slate-300 rounded-lg focus:border-indigo-500 focus:outline-none transition-colors" placeholder="?">
+                    </div>
+                </div>
+
+                <div class="flex flex-col items-end gap-2">
+                    <button id="checkBtn" class="flex items-center gap-2 px-8 py-3 rounded-lg font-bold shadow-lg transition-all active:scale-95 bg-green-500 hover:bg-green-600 text-white text-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check"><polyline points="20 6 9 17 4 12"/></svg>
+                        Тексеру
+                    </button>
+                    <!-- Feedback Message -->
+                    <div id="feedbackMessage" class="h-6 text-sm font-bold text-center w-full"></div>
+                </div>
+            </div>
+
+            <!-- Zoom Controls -->
+            <div class="flex justify-end gap-2 mb-2 px-2">
+                <button id="zoomOutBtn" class="p-2 bg-white border border-slate-300 rounded hover:bg-slate-50 text-slate-600" title="Кішірейту">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-zoom-out"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="8" x2="14" y1="11" y2="11"/></svg>
+                </button>
+                <span id="zoomDisplay" class="px-2 py-2 text-sm text-slate-500 min-w-[60px] text-center font-mono">100%</span>
+                <button id="zoomInBtn" class="p-2 bg-white border border-slate-300 rounded hover:bg-slate-50 text-slate-600" title="Үлкейту">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-zoom-in"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg>
+                </button>
+            </div>
+
+            <!-- Visualization Area -->
+            <div id="visualizationContainer" class="relative w-full overflow-x-auto border rounded-xl bg-white cursor-grab active:cursor-grabbing shadow-inner bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:20px_20px]" style="height: 450px;">
+                <!-- SVG will be injected here by JavaScript -->
+            </div>
+
+            <!-- Legend -->
+            <div class="mt-6 flex flex-wrap gap-4 justify-center text-sm">
+                <div class="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-800 rounded-full border border-blue-200">
+                    <span class="w-3 h-3 rounded-full bg-blue-600"></span>
+                    1-ші сан (Бастапқы нүкте)
+                </div>
+                <div class="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-800 rounded-full border border-red-200">
+                    <span class="w-3 h-3 rounded-full bg-red-600"></span>
+                    2-ші сан (Өзгеріс)
+                </div>
+                <div class="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-800 rounded-full border border-green-200">
+                    <span class="w-3 h-3 rounded-full bg-green-600"></span>
+                    Нәтиже
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Floating Keypad (Fixed Right Side) -->
+        <!-- Only visible on md screens (laptops/tablets) and up. Hidden on mobile to use native keyboard. -->
+        <div id="keypad" class="fixed right-4 top-1/2 -translate-y-1/2 bg-white p-3 rounded-xl shadow-2xl border-2 border-slate-200 z-50 hidden md:grid grid-cols-3 gap-2 w-[180px]">
+            <!-- Header for Keypad -->
+            <div class="col-span-3 text-center text-xs text-slate-400 uppercase tracking-widest font-bold mb-1">Пернетақта</div>
+            
+            <button class="keypad-btn bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-lg text-xl" onclick="keypadPress('7')">7</button>
+            <button class="keypad-btn bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-lg text-xl" onclick="keypadPress('8')">8</button>
+            <button class="keypad-btn bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-lg text-xl" onclick="keypadPress('9')">9</button>
+            
+            <button class="keypad-btn bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-lg text-xl" onclick="keypadPress('4')">4</button>
+            <button class="keypad-btn bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-lg text-xl" onclick="keypadPress('5')">5</button>
+            <button class="keypad-btn bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-lg text-xl" onclick="keypadPress('6')">6</button>
+            
+            <button class="keypad-btn bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-lg text-xl" onclick="keypadPress('1')">1</button>
+            <button class="keypad-btn bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-lg text-xl" onclick="keypadPress('2')">2</button>
+            <button class="keypad-btn bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-lg text-xl" onclick="keypadPress('3')">3</button>
+            
+            <button class="keypad-btn bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3 rounded-lg text-xl" onclick="keypadPress('-')">−</button>
+            <button class="keypad-btn bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-lg text-xl" onclick="keypadPress('0')">0</button>
+            <button class="keypad-btn bg-red-100 hover:bg-red-200 text-red-600 font-bold py-3 rounded-lg text-lg flex justify-center items-center" onclick="keypadDelete()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
+            </button>
+            
+            <button class="col-span-3 keypad-btn bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-lg text-lg mt-1" onclick="document.getElementById('checkBtn').click()">
+                Енгізу (Enter)
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Global State Variables
+        let num1 = -2;
+        let num2 = 3;
+        let step = 0; // 0: clear, 1: first number, 2: second number/result
+        let zoom = 1.0;
+        let isProblemActive = true;
+
+        // Scoreboard Stats
+        let stats = {
+            total: 0,
+            correct: 0,
+            wrong: 0
+        };
+        
+        // Constants
+        const minRange = -12;
+        const maxRange = 12;
+        const baseTickSpacing = 40;
+        const svgHeight = 450;
+        const lineY = 200; // Y coordinate for the number line in the SVG coordinate system
+
+        // DOM Elements
+        const problemDisplay = document.getElementById('problemDisplay');
+        const answerInput = document.getElementById('answerInput');
+        const checkBtn = document.getElementById('checkBtn');
+        const feedbackMessage = document.getElementById('feedbackMessage');
+        const visualizationContainer = document.getElementById('visualizationContainer');
+        const zoomDisplay = document.getElementById('zoomDisplay');
+        const generateBtn = document.getElementById('generateBtn');
+
+        // Scoreboard Elements
+        const totalCountDisplay = document.getElementById('totalCountDisplay');
+        const correctCountDisplay = document.getElementById('correctCountDisplay');
+        const wrongCountDisplay = document.getElementById('wrongCountDisplay');
+
+        // Fullscreen Elements
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const fullscreenIcon = document.getElementById('fullscreenIcon');
+
+        // --- Core Helpers ---
+
+        const getX = (val) => {
+            const tickSpacing = baseTickSpacing * zoom;
+            const totalTicks = maxRange - minRange;
+            const contentWidth = (totalTicks * tickSpacing) + 100;
+            const zeroX = contentWidth / 2;
+            return zeroX + (val * tickSpacing);
+        };
+
+        // Calculates both the Path D string and an approximate length for animation
+        const getArrowData = (start, end, heightDirection) => {
+            const startX = getX(start);
+            const endX = getX(end);
+            const distance = Math.abs(endX - startX);
+            
+            const arcHeight = Math.max(40, distance / 2.5); // Magnitude of height
+            const directedArcHeight = arcHeight * heightDirection; // Direction
+            
+            const midX = (startX + endX) / 2;
+            const midY = directedArcHeight; 
+
+            const d = `M ${startX} 0 Q ${midX} ${midY} ${endX} 0`;
+            
+            const length = 2 * Math.sqrt(Math.pow(distance / 2, 2) + Math.pow(arcHeight, 2)) + 20;
+
+            return { d, length };
+        };
+
+        const createSVGElement = (name, attrs = {}) => {
+            const el = document.createElementNS('http://www.w3.org/2000/svg', name);
+            for (const key in attrs) {
+                if (key === 'className') {
+                    el.setAttribute('class', attrs[key]);
+                } else if (key === 'innerHTML') {
+                    el.innerHTML = attrs[key];
+                } else {
+                    el.setAttribute(key, attrs[key]);
+                }
+            }
+            return el;
+        };
+
+        // --- Drawing/Rendering Logic ---
+
+        const renderVisualization = () => {
+            const tickSpacing = baseTickSpacing * zoom;
+            const totalTicks = maxRange - minRange;
+            const contentWidth = (totalTicks * tickSpacing) + 100;
+            
+            visualizationContainer.innerHTML = '';
+
+            const svg = createSVGElement('svg', {
+                width: contentWidth,
+                height: svgHeight,
+                viewBox: `0 0 ${contentWidth} ${svgHeight}`,
+                className: 'select-none min-w-full'
+            });
+
+            // Defs
+            const defs = createSVGElement('defs');
+            const markers = [
+                { id: 'arrowhead-blue', fill: '#2563eb' },
+                { id: 'arrowhead-red', fill: '#dc2626' },
+                { id: 'arrowhead-black', fill: '#475569' }
+            ];
+            markers.forEach(m => {
+                const marker = createSVGElement('marker', { 
+                    id: m.id, markerWidth: 8, markerHeight: 6, refX: 7, refY: 3, orient: 'auto' 
+                });
+                const polygon = createSVGElement('polygon', { points: '0 0, 8 3, 0 6', fill: m.fill });
+                marker.appendChild(polygon);
+                defs.appendChild(marker);
+            });
+            svg.appendChild(defs);
+
+            const gCenter = createSVGElement('g', { transform: `translate(0, ${lineY})` });
+
+            // Axis Line
+            const axisLine = createSVGElement('line', {
+                x1: 20, y1: 0, x2: contentWidth - 20, y2: 0, 
+                stroke: '#475569', strokeWidth: 2, 
+                'marker-end': 'url(#arrowhead-black)'
+            });
+            gCenter.appendChild(axisLine);
+
+            // Ticks and Numbers
+            for (let i = 0; i <= totalTicks; i++) {
+                const val = minRange + i;
+                const x = getX(val);
+                const isZero = val === 0;
+
+                const tickGroup = createSVGElement('g');
+
+                // Tick
+                tickGroup.appendChild(createSVGElement('line', {
+                    x1: x, y1: -8, x2: x, y2: 8, 
+                    stroke: '#475569', strokeWidth: isZero ? 3 : 1.5 
+                }));
+                
+                // Number
+                tickGroup.appendChild(createSVGElement('text', {
+                    x: x, y: 35, 'text-anchor': 'middle', 
+                    fill: isZero ? '#3730a3' : '#64748b',
+                    'font-weight': isZero ? 'bold' : 'normal',
+                    style: `font-size: ${isZero ? '20px' : '14px'};`,
+                    innerHTML: val
+                }));
+
+                // Grid line
+                tickGroup.appendChild(createSVGElement('line', {
+                    x1: x, y1: -200, x2: x, y2: 200, 
+                    stroke: '#cbd5e1', strokeWidth: 1, 'stroke-dasharray': '4 4', opacity: 0.4 
+                }));
+                
+                gCenter.appendChild(tickGroup);
+            }
+
+            // Step 1: Blue Arrow (Above)
+            if (step >= 1) {
+                const gStep1 = createSVGElement('g', { className: 'animate-draw-arrow' });
+                const arrowData = getArrowData(0, num1, -1);
+                
+                const duration = Math.min(1.2, Math.max(0.6, arrowData.length / 500));
+
+                const path = createSVGElement('path', {
+                    d: arrowData.d,
+                    fill: 'none', stroke: '#2563eb', strokeWidth: 4, 
+                    'marker-end': 'url(#arrowhead-blue)',
+                    'stroke-linecap': 'round',
+                    'filter': 'drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06))',
+                    style: `stroke-dasharray: ${arrowData.length}; stroke-dashoffset: ${arrowData.length}; animation-duration: ${duration}s;`
+                });
+                gStep1.appendChild(path);
+
+                const labelGroup1 = createSVGElement('g', {
+                    transform: `translate(${(getX(0) + getX(num1))/2}, -${Math.abs(getX(num1)-getX(0))/2.5 * baseTickSpacing * zoom/40 + 30})`
+                });
+                labelGroup1.appendChild(createSVGElement('rect', {
+                    x: -20, y: -15, width: 40, height: 30, rx: 6, 
+                    fill: 'white', stroke: '#2563eb', strokeWidth: 2
+                }));
+                // Corrected syntax error here:
+                labelGroup1.appendChild(createSVGElement('text', {
+                    x: 0, y: 6, 'text-anchor': 'middle', fill: '#2563eb', 
+                    'font-weight': 'bold', 'font-size': 16, innerHTML: num1 > 0 ? `+${num1}` : num1
+                }));
+                gStep1.appendChild(labelGroup1);
+                gCenter.appendChild(gStep1);
+            }
+
+            // Step 2: Red Arrow (Below)
+            if (step >= 2) {
+                const gStep2 = createSVGElement('g', { className: 'animate-draw-arrow' });
+                const arrowData = getArrowData(num1, num1 + num2, 1);
+                const duration = Math.min(1.2, Math.max(0.6, arrowData.length / 500));
+
+                const path = createSVGElement('path', {
+                    d: arrowData.d,
+                    fill: 'none', stroke: '#dc2626', strokeWidth: 4, 
+                    'marker-end': 'url(#arrowhead-red)',
+                    'stroke-dasharray': '8,4',
+                    'stroke-linecap': 'round',
+                    'filter': 'drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06))',
+                    style: `stroke-dasharray: ${arrowData.length}; stroke-dashoffset: ${arrowData.length}; animation-duration: ${duration}s;`
+                });
+                gStep2.appendChild(path);
+
+                const labelGroup2 = createSVGElement('g', {
+                    transform: `translate(${(getX(num1) + getX(num1+num2))/2}, ${Math.max(60, Math.abs(getX(num1+num2)-getX(num1))/2.5 * baseTickSpacing * zoom/40 + 40)})`
+                });
+                labelGroup2.appendChild(createSVGElement('rect', {
+                    x: -20, y: -15, width: 40, height: 30, rx: 6, 
+                    fill: 'white', stroke: '#dc2626', strokeWidth: 2
+                }));
+                labelGroup2.appendChild(createSVGElement('text', {
+                    x: 0, y: 6, 'text-anchor': 'middle', fill: '#dc2626', 
+                    'font-weight': 'bold', 'font-size': 16, innerHTML: num2 > 0 ? `+${num2}` : num2
+                }));
+                gStep2.appendChild(labelGroup2);
+
+                const gResult = createSVGElement('g', { transform: `translate(${getX(num1 + num2)}, 0)` });
+                gResult.appendChild(createSVGElement('circle', { r: 8, fill: '#16a34a', className: 'animate-pulse' }));
+                gResult.appendChild(createSVGElement('line', { y1: 10, y2: 60, stroke: '#16a34a', strokeWidth: 2, 'stroke-dasharray': '4' }));
+                gResult.appendChild(createSVGElement('text', { y: 80, 'text-anchor': 'middle', fill: '#16a34a', 'font-weight': 'bold', 'font-size': 22, innerHTML: num1 + num2 }));
+                gStep2.appendChild(gResult);
+
+                gCenter.appendChild(gStep2);
+            }
+
+            svg.appendChild(gCenter);
+            visualizationContainer.appendChild(svg);
+        };
+
+        const updateDisplay = () => {
+            problemDisplay.textContent = `${num1} ${num2 >= 0 ? '+' : '-'} ${Math.abs(num2)}`;
+            zoomDisplay.textContent = `${Math.round(zoom * 100)}%`;
+            
+            // Scoreboard updates
+            totalCountDisplay.textContent = stats.total;
+            correctCountDisplay.textContent = stats.correct;
+            wrongCountDisplay.textContent = stats.wrong;
+        };
+
+        // --- Game Logic ---
+
+        const generateProblem = () => {
+            let newNum1, newNum2;
+            
+            do {
+                newNum1 = Math.floor(Math.random() * 17) - 8; 
+                newNum2 = Math.floor(Math.random() * 17) - 8;
+            } while (newNum1 + newNum2 < minRange || newNum1 + newNum2 > maxRange || newNum2 === 0);
+
+            num1 = newNum1;
+            num2 = newNum2;
+            step = 0;
+            isProblemActive = true;
+            
+            // Reset UI for new problem
+            answerInput.value = '';
+            answerInput.disabled = false;
+            answerInput.classList.remove('border-green-500', 'text-green-600', 'border-red-500', 'text-red-600');
+            answerInput.classList.add('border-slate-300');
+            answerInput.focus();
+            
+            checkBtn.disabled = false;
+            checkBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            
+            feedbackMessage.textContent = '';
+            
+            updateDisplay();
+            renderVisualization();
+            centerView();
+        };
+
+        const handleCheck = () => {
+            if (!isProblemActive) return;
+
+            const userVal = parseInt(answerInput.value);
+            const correctVal = num1 + num2;
+
+            if (isNaN(userVal)) {
+                feedbackMessage.textContent = "Жауап жазыңыз!";
+                feedbackMessage.className = "h-6 text-sm font-bold text-center w-full text-orange-500";
+                return;
+            }
+
+            // Lock the problem
+            isProblemActive = false;
+            stats.total++;
+            answerInput.disabled = true;
+            checkBtn.disabled = true;
+            checkBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            if (userVal === correctVal) {
+                // Correct
+                stats.correct++;
+                answerInput.classList.remove('border-slate-300');
+                answerInput.classList.add('border-green-500', 'text-green-600');
+                feedbackMessage.textContent = "Жарайсың! Жауап дұрыс.";
+                feedbackMessage.className = "h-6 text-sm font-bold text-center w-full text-green-600";
+            } else {
+                // Wrong
+                stats.wrong++;
+                answerInput.classList.remove('border-slate-300');
+                answerInput.classList.add('border-red-500', 'text-red-600');
+                feedbackMessage.textContent = `Қате! Дұрыс жауабы: ${correctVal}`;
+                feedbackMessage.className = "h-6 text-sm font-bold text-center w-full text-red-600";
+            }
+
+            updateDisplay();
+
+            // Play animation
+            step = 0;
+            renderVisualization();
+            setTimeout(() => { step = 1; renderVisualization(); }, 100);
+            setTimeout(() => { step = 2; renderVisualization(); }, 1500);
+        };
+        
+        const setZoomLevel = (newZoom) => {
+            zoom = Math.max(0.5, Math.min(2.5, newZoom));
+            updateDisplay();
+            renderVisualization();
+            centerView();
+        };
+
+        const centerView = () => {
+             const scrollContainer = document.getElementById('visualizationContainer');
+             if (scrollContainer.scrollWidth > scrollContainer.clientWidth) {
+                 const totalTicks = maxRange - minRange;
+                 const contentWidth = (totalTicks * baseTickSpacing * zoom) + 100;
+                 const centerScrollPosition = (contentWidth / 2) - (scrollContainer.clientWidth / 2);
+                 scrollContainer.scrollLeft = centerScrollPosition;
+             }
+        };
+
+        // --- Keypad Logic ---
+        window.keypadPress = function(val) {
+            if (!isProblemActive) return;
+            
+            // Handle minus sign logic (toggle sign)
+            if (val === '-') {
+                if (answerInput.value === '') {
+                    answerInput.value = '-';
+                } else if (answerInput.value === '-') {
+                    answerInput.value = '';
+                } else {
+                    // Toggle existing number
+                    let currentVal = parseInt(answerInput.value);
+                    if (!isNaN(currentVal)) {
+                        answerInput.value = (currentVal * -1).toString();
+                    }
+                }
+                answerInput.focus();
+                return;
+            }
+            
+            answerInput.value += val;
+            answerInput.focus();
+        };
+
+        window.keypadDelete = function() {
+            if (!isProblemActive) return;
+            answerInput.value = answerInput.value.slice(0, -1);
+            answerInput.focus();
+        };
+
+        // --- Initialization ---
+
+        window.onload = function() {
+            generateProblem(); 
+            
+            generateBtn.addEventListener('click', generateProblem);
+            checkBtn.addEventListener('click', handleCheck);
+            
+            // Allow "Enter" key to submit
+            answerInput.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    handleCheck();
+                }
+            });
+
+            // Enforce pattern on manual input since type is now text
+            answerInput.addEventListener('input', function() {
+                this.value = this.value.replace(/[^0-9-]/g, '');
+            });
+            
+            document.getElementById('zoomInBtn').addEventListener('click', () => setZoomLevel(zoom + 0.2));
+            document.getElementById('zoomOutBtn').addEventListener('click', () => setZoomLevel(zoom - 0.2));
+
+            // Fullscreen Logic
+            fullscreenBtn.addEventListener('click', () => {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(err => {
+                        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+                    });
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    }
+                }
+            });
+
+            // Update icon on change
+            document.addEventListener("fullscreenchange", () => {
+                if (document.fullscreenElement) {
+                    // Change to Minimize icon
+                    fullscreenIcon.innerHTML = '<path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/>';
+                } else {
+                    // Change back to Maximize icon
+                    fullscreenIcon.innerHTML = '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>';
+                }
+            });
+
+            // Drag to scroll logic
+            let isDragging = false;
+            let startX;
+            let scrollLeft;
+            visualizationContainer.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                startX = e.pageX - visualizationContainer.offsetLeft;
+                scrollLeft = visualizationContainer.scrollLeft;
+            });
+            visualizationContainer.addEventListener('mouseleave', () => { isDragging = false; });
+            visualizationContainer.addEventListener('mouseup', () => { isDragging = false; });
+            visualizationContainer.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                e.preventDefault();
+                const x = e.pageX - visualizationContainer.offsetLeft;
+                const walk = (x - startX) * 1.5; 
+                visualizationContainer.scrollLeft = scrollLeft - walk;
+            });
+            window.addEventListener('resize', () => {
+                renderVisualization();
+                centerView();
+            });
+        };
+    </script>
+</body>
+</html>
