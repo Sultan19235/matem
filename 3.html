@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Математикалық тренажер - Ұқсас мүшелер</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- KaTeX for beautiful math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            overflow-x: hidden;
+        }
+        .keypad-btn {
+            transition: all 0.1s ease;
+            user-select: none;
+        }
+        .keypad-btn:active {
+            transform: scale(0.92);
+            background-color: #e2e8f0;
+        }
+        :fullscreen body {
+            background-color: #f8fafc;
+            padding: 2rem;
+        }
+        .success-pop {
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes popIn {
+            0% { opacity: 0; transform: translateY(10px) scale(0.9); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        /* Fix for KaTeX display sizing */
+        .katex-display { margin: 0.5em 0; }
+        .katex { font-size: 1.2em; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-2 md:p-6" id="app-body">
+
+    <header class="w-full max-w-5xl flex flex-col md:flex-row justify-between items-center mb-4 gap-2">
+        <div class="text-center md:text-left">
+            <h1 class="text-xl md:text-2xl font-bold text-slate-800">Ұқсас мүшелерді біріктіру</h1>
+        </div>
+        <button onclick="toggleFullScreen()" class="flex items-center gap-2 px-3 py-1.5 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-all text-xs font-medium">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+            Толық экран
+        </button>
+    </header>
+
+    <!-- Statistics -->
+    <div class="w-full max-w-5xl mb-4">
+        <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Статистика:</span>
+                    <div class="flex gap-2">
+                        <div class="px-3 py-1 bg-blue-50 rounded-lg border border-blue-100 flex items-center gap-2">
+                            <span class="text-[10px] font-bold text-blue-700 uppercase">Жеңіл</span>
+                            <span id="easy-count" class="font-bold text-slate-700 text-xs">0/0</span>
+                            <span id="easy-pct" class="text-[10px] font-semibold bg-blue-200 px-1 rounded">0%</span>
+                        </div>
+                        <div class="px-3 py-1 bg-green-50 rounded-lg border border-green-100 flex items-center gap-2">
+                            <span class="text-[10px] font-bold text-green-700 uppercase">Орташа</span>
+                            <span id="medium-count" class="font-bold text-slate-700 text-xs">0/0</span>
+                            <span id="medium-pct" class="text-[10px] font-semibold bg-green-200 px-1 rounded">0%</span>
+                        </div>
+                        <div class="px-3 py-1 bg-purple-50 rounded-lg border border-purple-100 flex items-center gap-2">
+                            <span class="text-[10px] font-bold text-purple-700 uppercase">Қиын</span>
+                            <span id="hard-count" class="font-bold text-slate-700 text-xs">0/0</span>
+                            <span id="hard-pct" class="text-[10px] font-semibold bg-purple-200 px-1 rounded">0%</span>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="resetStats()" class="text-[10px] text-slate-400 hover:text-red-500 underline uppercase font-bold">Тазалау</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-12 gap-4">
+        
+        <!-- Problem Area -->
+        <div class="md:col-span-9 space-y-4">
+            <!-- Level Selector -->
+            <div class="flex p-1 bg-slate-200 rounded-xl text-xs md:text-sm max-w-xs mx-auto md:mx-0">
+                <button onclick="setLevel('easy')" id="btn-easy" class="flex-1 py-1.5 rounded-lg font-medium transition-all bg-white text-slate-800 shadow-sm">Жеңіл</button>
+                <button onclick="setLevel('medium')" id="btn-medium" class="flex-1 py-1.5 rounded-lg font-medium transition-all text-slate-600 hover:bg-white/50">Орташа</button>
+                <button onclick="setLevel('hard')" id="btn-hard" class="flex-1 py-1.5 rounded-lg font-medium transition-all text-slate-600 hover:bg-white/50">Қиын</button>
+            </div>
+
+            <!-- Problem Card -->
+            <div class="bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-slate-100 text-center space-y-4 relative min-h-[320px] flex flex-col justify-center">
+                
+                <!-- Compact Success Message -->
+                <div id="success-msg" class="absolute top-4 left-0 right-0 flex justify-center pointer-events-none opacity-0 transition-all duration-300">
+                    <span class="bg-green-100 text-green-700 border border-green-200 px-4 py-1.5 rounded-full text-sm font-bold shadow-sm success-pop">
+                        Дұрыс! Жарайсың! ✨
+                    </span>
+                </div>
+
+                <!-- LaTeX Display Area -->
+                <div id="problem-display" class="text-3xl md:text-5xl font-bold tracking-tight text-slate-800 min-h-[100px] flex items-center justify-center py-4">
+                    <!-- KaTeX will render here -->
+                </div>
+
+                <div class="max-w-md mx-auto w-full space-y-4">
+                    <div class="relative">
+                        <input type="text" id="user-answer" readonly
+                            class="w-full text-2xl md:text-3xl font-bold text-center p-3 md:p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:outline-none focus:border-blue-500 transition-all shadow-inner"
+                            placeholder="Жауабы...">
+                        <div id="feedback" class="mt-2 font-bold text-xs md:text-sm hidden text-center h-4"></div>
+                    </div>
+
+                    <div class="flex gap-2 md:gap-4">
+                        <button onclick="clearAnswer()" class="flex-1 py-3 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-200 transition-colors uppercase tracking-wider">Тазалау</button>
+                        <button onclick="checkAnswer()" class="flex-[2] py-3 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all uppercase tracking-wider">Тексеру</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side: Small Keypad -->
+        <div class="md:col-span-3">
+            <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200 sticky top-4">
+                <p class="text-center text-[9px] font-bold text-slate-300 uppercase tracking-widest mb-3">Пернетақта</p>
+                <div class="grid grid-cols-3 gap-1.5">
+                    <button onclick="append('1')" class="keypad-btn p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-base font-bold text-slate-600 hover:bg-white hover:shadow-sm">1</button>
+                    <button onclick="append('2')" class="keypad-btn p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-base font-bold text-slate-600 hover:bg-white hover:shadow-sm">2</button>
+                    <button onclick="append('3')" class="keypad-btn p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-base font-bold text-slate-600 hover:bg-white hover:shadow-sm">3</button>
+                    <button onclick="append('4')" class="keypad-btn p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-base font-bold text-slate-600 hover:bg-white hover:shadow-sm">4</button>
+                    <button onclick="append('5')" class="keypad-btn p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-base font-bold text-slate-600 hover:bg-white hover:shadow-sm">5</button>
+                    <button onclick="append('6')" class="keypad-btn p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-base font-bold text-slate-600 hover:bg-white hover:shadow-sm">6</button>
+                    <button onclick="append('7')" class="keypad-btn p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-base font-bold text-slate-600 hover:bg-white hover:shadow-sm">7</button>
+                    <button onclick="append('8')" class="keypad-btn p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-base font-bold text-slate-600 hover:bg-white hover:shadow-sm">8</button>
+                    <button onclick="append('9')" class="keypad-btn p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-base font-bold text-slate-600 hover:bg-white hover:shadow-sm">9</button>
+                    
+                    <button onclick="append('-')" class="keypad-btn p-2.5 bg-orange-50 border border-orange-100 rounded-xl text-base font-bold text-orange-500 hover:bg-white hover:shadow-sm">−</button>
+                    <button onclick="append('0')" class="keypad-btn p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-base font-bold text-slate-600 hover:bg-white hover:shadow-sm">0</button>
+                    <button onclick="append('+')" class="keypad-btn p-2.5 bg-orange-50 border border-orange-100 rounded-xl text-base font-bold text-orange-500 hover:bg-white hover:shadow-sm">+</button>
+                    
+                    <button onclick="append('x')" class="keypad-btn p-2.5 bg-blue-50 border border-blue-100 rounded-xl text-base font-bold text-blue-500 hover:bg-white hover:shadow-sm italic">x</button>
+                    <button onclick="append('y')" class="keypad-btn p-2.5 bg-blue-50 border border-blue-100 rounded-xl text-base font-bold text-blue-500 hover:bg-white hover:shadow-sm italic">y</button>
+                    <button onclick="backspace()" class="keypad-btn p-2.5 bg-red-50 border border-red-100 rounded-xl text-base font-bold text-red-500 hover:bg-white hover:shadow-sm">⌫</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentLevel = 'easy';
+        let currentProblem = null;
+        let stats = {
+            easy: { correct: 0, total: 0 },
+            medium: { correct: 0, total: 0 },
+            hard: { correct: 0, total: 0 }
+        };
+
+        const displayEl = document.getElementById('problem-display');
+        const inputEl = document.getElementById('user-answer');
+        const feedbackEl = document.getElementById('feedback');
+        const successMsgEl = document.getElementById('success-msg');
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => console.error(err));
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+            }
+        }
+
+        function setLevel(lvl) {
+            currentLevel = lvl;
+            ['easy', 'medium', 'hard'].forEach(l => {
+                const btn = document.getElementById(`btn-${l}`);
+                btn.className = l === lvl 
+                    ? "flex-1 py-1.5 rounded-lg font-medium transition-all bg-white text-slate-800 shadow-sm"
+                    : "flex-1 py-1.5 rounded-lg font-medium transition-all text-slate-600 hover:bg-white/50";
+            });
+            generateProblem();
+        }
+
+        // Helper to format LaTeX math
+        function renderMath(latex) {
+            if (window.katex) {
+                katex.render(latex, displayEl, {
+                    throwOnError: false,
+                    displayMode: true
+                });
+            } else {
+                displayEl.innerText = latex;
+            }
+        }
+
+        function generateProblem() {
+            inputEl.value = "";
+            feedbackEl.classList.add('hidden');
+            let rawText = "";
+            let answerText = "";
+
+            if (currentLevel === 'easy') {
+                const a = Math.floor(Math.random() * 10) - 5 || 1;
+                const b = Math.floor(Math.random() * 10) - 5 || 1;
+                rawText = `${formatTerm(a, 'x', true)}${formatTerm(b, 'x', false)}`;
+                answerText = simplify(a + b, 'x');
+            } 
+            else if (currentLevel === 'medium') {
+                const x1 = Math.floor(Math.random() * 8) - 4 || 1;
+                const y1 = Math.floor(Math.random() * 8) - 4 || 1;
+                const x2 = Math.floor(Math.random() * 8) - 4 || 1;
+                const y2 = Math.floor(Math.random() * 8) - 4 || 1;
+                rawText = `${formatTerm(x1, 'x', true)}${formatTerm(y1, 'y', false)}${formatTerm(x2, 'x', false)}${formatTerm(y2, 'y', false)}`;
+                answerText = simplify(x1 + x2, 'x', y1 + y2, 'y');
+            } 
+            else if (currentLevel === 'hard') {
+                const x1 = Math.floor(Math.random() * 6) - 3 || 1;
+                const c1 = Math.floor(Math.random() * 10) - 5;
+                const y1 = Math.floor(Math.random() * 6) - 3 || 1;
+                const c2 = Math.floor(Math.random() * 10) - 5;
+                const x2 = Math.floor(Math.random() * 6) - 3 || 1;
+                const y2 = Math.floor(Math.random() * 6) - 3 || 1;
+                rawText = `${formatTerm(x1, 'x', true)}${formatConst(c1)}${formatTerm(y1, 'y', false)}${formatConst(c2)}${formatTerm(x2, 'x', false)}${formatTerm(y2, 'y', false)}`;
+                answerText = simplify(x1 + x2, 'x', y1 + y2, 'y', c1 + c2, '');
+            }
+
+            currentProblem = { raw: rawText, answer: answerText };
+            renderMath(rawText);
+        }
+
+        function formatTerm(coeff, variable, isFirst) {
+            let res = "";
+            if (coeff === 1) res = variable;
+            else if (coeff === -1) res = "-" + variable;
+            else res = coeff + variable;
+            if (!isFirst && coeff > 0) res = "+" + res;
+            return res;
+        }
+
+        function formatConst(c) {
+            if (c === 0) return "";
+            return (c > 0 ? "+" : "") + c;
+        }
+
+        function simplify(val1, var1, val2, var2, val3, var3) {
+            let terms = [];
+            if (val1 !== 0) terms.push(formatTerm(val1, var1, true));
+            if (val2 !== undefined && val2 !== 0) terms.push(formatTerm(val2, var2, terms.length === 0));
+            if (val3 !== undefined && val3 !== 0) terms.push((val3 > 0 && terms.length > 0 ? "+" : "") + val3);
+            if (terms.length === 0) return "0";
+            let result = terms.join("");
+            if (result.startsWith("+")) result = result.substring(1);
+            return result;
+        }
+
+        function append(char) {
+            inputEl.value += char;
+        }
+
+        function backspace() {
+            inputEl.value = inputEl.value.slice(0, -1);
+        }
+
+        function clearAnswer() {
+            inputEl.value = "";
+        }
+
+        function checkAnswer() {
+            if (!inputEl.value) return;
+            // Standardize symbols for comparison
+            const userVal = inputEl.value.trim().replace(/\s+/g, '').replace(/−/g, '-');
+            const correctVal = currentProblem.answer.replace(/\s+/g, '').replace(/−/g, '-');
+            const isCorrect = userVal === correctVal;
+
+            stats[currentLevel].total++;
+            if (isCorrect) {
+                stats[currentLevel].correct++;
+                showSuccess();
+                setTimeout(generateProblem, 1200);
+            } else {
+                showFeedback(`Қате. Дұрыс: ${currentProblem.answer}`, "text-red-500");
+            }
+            updateStatsUI();
+        }
+
+        function showSuccess() {
+            successMsgEl.style.opacity = "1";
+            setTimeout(() => {
+                successMsgEl.style.opacity = "0";
+            }, 1000);
+        }
+
+        function showFeedback(text, colorClass) {
+            feedbackEl.innerText = text;
+            feedbackEl.className = `mt-2 font-bold text-xs md:text-sm text-center ${colorClass}`;
+            feedbackEl.classList.remove('hidden');
+        }
+
+        function updateStatsUI() {
+            ['easy', 'medium', 'hard'].forEach(lvl => {
+                const s = stats[lvl];
+                const pct = s.total === 0 ? 0 : Math.round((s.correct / s.total) * 100);
+                document.getElementById(`${lvl}-count`).innerText = `${s.correct}/${s.total}`;
+                document.getElementById(`${lvl}-pct`).innerText = `${pct}%`;
+            });
+        }
+
+        function resetStats() {
+            stats = { easy: { correct: 0, total: 0 }, medium: { correct: 0, total: 0 }, hard: { correct: 0, total: 0 } };
+            updateStatsUI();
+        }
+
+        // Wait for KaTeX to load before first problem
+        window.onload = () => {
+            setTimeout(generateProblem, 100);
+        };
+    </script>
+</body>
+</html>
